@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+ content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
+<title>Open World Action</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #101820;
+  font-family: Arial, sans-serif;
+  color: white;
+  touch-action: none;
+}
+
+canvas {
+  display: block;
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.panel {
+  background: rgba(5, 12, 20, .82);
+  border: 1px solid #536575;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+#status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 185px;
+}
+
+#gameTitle {
+  font-weight: 900;
+  color: #ffcc44;
+  font-size: 14px;
+  margin-bottom: 7px;
+}
+
+#healthBar {
+  height: 12px;
+  background: #4a2424;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+#healthFill {
+  width: 100%;
+  height: 100%;
+  background: #35df70;
+  transition: width .15s;
+}
+
+#info {
+  font-size: 12px;
+  margin-top: 7px;
+  line-height: 1.5;
+}
+
+#message {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,.7);
+  padding: 12px 20px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: bold;
+  color: #ffdc65;
+  display: none;
+}
+
+#controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+button {
+  color: white;
+  font-weight: bold;
+  border: 1px solid rgba(255,255,255,.3);
+  background: rgba(20, 30, 45, .86);
+  border-radius: 14px;
+  min-width: 54px;
+  min-height: 48px;
+  font-size: 12px;
+  touch-action: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+button:active {
+  background: #b67b24;
+}
+
+#movePad {
+  position: absolute;
+  left: 15px;
+  bottom: 20px;
+  width: 155px;
+  height: 150px;
+  pointer-events: auto;
+}
+
+.moveBtn {
+  position: absolute;
+  width: 49px;
+  height: 47px;
+  min-width: 0;
+  min-height: 0;
+  font-size: 22px;
+  border-radius: 12px;
+}
+
+#forward { left: 53px; top: 0; }
+#backward { left: 53px; bottom: 0; }
+#left { left: 0; top: 52px; }
+#right { right: 0; top: 52px; }
+
+#actions {
+  position: absolute;
+  right: 12px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: 68px 68px;
+  gap: 9px;
+  align-items: end;
+}
+
+.actionBtn {
+  min-width: 0;
+  width: 68px;
+  height: 57px;
+  border-radius: 50%;
+  font-size: 11px;
+  background: rgba(35, 45, 60, .92);
+}
+
+#shoot {
+  background: rgba(155, 45, 30, .94);
+}
+
+#cameraBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  pointer-events: auto;
+}
+
+#driveBtn {
+  position: absolute;
+  left: 50%;
+  bottom: 25%;
+  transform: translateX(-50%);
+  display: none;
+  pointer-events: auto;
+}
+
+#help {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  background: rgba(0,0,0,.65);
+  padding: 7px 10px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 15, 25, .94);
+  text-align: center;
+  padding: 25px;
+  z-index: 10;
+}
+
+#overlay h1 {
+  color: #ffcc44;
+  font-size: 30px;
+  margin-bottom: 5px;
+}
+
+#overlay p {
+  max-width: 340px;
+  line-height: 1.6;
+  color: #d3dce6;
+}
+
+#startBtn {
+  padding: 15px 35px;
+  background: #b77c21;
+  font-size: 16px;
+  margin-top: 15px;
+}
+
+#overlay small {
+  color: #91a4b5;
+  margin-top: 18px;
+}
+
+@media (max-height: 420px) {
+  #movePad {
+    transform: scale(.8);
+    transform-origin: bottom left;
+  }
+
+  #actions {
+    transform: scale(.8);
+    transform-origin: bottom right;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="overlay">
+  <h1>OPEN WORLD ACTION</h1>
+  <p>
+    Explore the city. Fight enemies. Drive a vehicle.
+    Switch cameras and survive!
+  </p>
+  <button id="startBtn">START MISSION</button>
+  <small>Mobile 3D action prototype</small>
+</div>
+
+<div id="hud">
+
+  <div id="status" class="panel">
+    <div id="gameTitle">OPEN WORLD ACTION</div>
+    HEALTH
+    <div id="healthBar">
+      <div id="healthFill"></div>
+    </div>
+    <div id="info">
+      Enemies: <span id="enemyCount">0</span><br>
+      Mode: <span id="mode">ON FOOT</span><br>
+      Region: CITY
+    </div>
+  </div>
+
+  <button id="cameraBtn">CAMERA</button>
+
+  <div id="help">Explore • Fight • Drive</div>
+
+  <div id="message"></div>
+
+  <div id="controls">
+
+    <div id="movePad">
+      <button class="moveBtn" id="forward">▲</button>
+      <button class="moveBtn" id="backward">▼</button>
+      <button class="moveBtn" id="left">◀</button>
+      <button class="moveBtn" id="right">▶</button>
+    </div>
+
+    <div id="actions">
+      <button class="actionBtn" id="shoot">SHOOT</button>
+      <button class="actionBtn" id="punch">PUNCH</button>
+      <button class="actionBtn" id="jump">JUMP</button>
+      <button class="actionBtn" id="reload">RELOAD</button>
+    </div>
+
+    <button id="driveBtn">ENTER VEHICLE</button>
+
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+
+/* ===================================
+   OPEN WORLD ACTION
+   First playable prototype
+=================================== */
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x91c7e8);
+scene.fog = new THREE.Fog(0x91c7e8, 65, 180);
+
+const camera = new THREE.PerspectiveCamera(
+  65, window.innerWidth / window.innerHeight, .1, 300
+);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: false,
+  powerPreference: "high-performance"
+});
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.shadowMap.enabled = false;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+document.body.prepend(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xe3f4ff, 0x596449, 2));
+
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(30, 60, 20);
+scene.add(sun);
+
+const clock = new THREE.Clock();
+
+const mat = (color, roughness = 1) =>
+  new THREE.MeshStandardMaterial({ color, roughness });
+
+const materials = {
+  grass: mat(0x587d43),
+  road: mat(0x343b42),
+  sidewalk: mat(0x92999c),
+  building: mat(0xb8a58b),
+  building2: mat(0x7d929b),
+  roof: mat(0x55545b),
+  tree: mat(0x315d32),
+  trunk: mat(0x64462b),
+  player: mat(0x2862a0),
+  skin: mat(0xc58c63),
+  enemy: mat(0xa72c2c),
+  enemySkin: mat(0x9c7156),
+  vehicle: mat(0x285846),
+  tire: mat(0x171a1d),
+  metal: mat(0x7e8991),
+  bullet: mat(0xffd45c)
+};
+
+const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+const sphereGeometry = new THREE.SphereGeometry(.5, 10, 8);
+const cylinderGeometry = new THREE.CylinderGeometry(.5, .5, 1, 8);
+
+function box(parent, x, y, z, sx, sy, sz, material) {
+  const mesh = new THREE.Mesh(boxGeometry, material);
+  mesh.position.set(x, y, z);
+  mesh.scale.set(sx, sy, sz);
+  parent.add(mesh);
+  return mesh;
+}
+
+function cylinder(parent, x, y, z, r, h, material) {
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(r, r, h, 8),
+    material
+  );
+  mesh.position.set(x, y, z);
+  parent.add(mesh);
+  return mesh;
+}
+
+/* WORLD */
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(220, 220),
+  materials.grass
+);
+
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -.06;
+scene.add(ground);
+
+// Main road
+box(scene, 0, 0, 0, 10, .08, 220, materials.road);
+box(scene, -6, .02, 0, 2, .12, 220, materials.sidewalk);
+box(scene, 6, .02, 0, 2, .12, 220, materials.sidewalk);
+
+for (let z = -105; z < 110; z += 9) {
+  box(scene, 0, .06, z, .18, .02, 4, mat(0xe5dca8));
+}
+
+// Side streets
+for (const x of [-45, 45]) {
+  box(scene, x, 0, 0, 8, .08, 220, materials.road);
+}
+
+// Buildings
+for (let x = -55; x <= 55; x += 15) {
+  for (let z = -90; z <= 90; z += 23) {
+
+    if (Math.abs(x) < 18 && Math.abs(z) < 22) continue;
+
+    const width = 8 + Math.random() * 4;
+    const depth = 9 + Math.random() * 5;
+    const height = 7 + Math.random() * 17;
+
+    const building = box(
+      scene,
+      x + (Math.random() - .5) * 3,
+      height / 2,
+      z + (Math.random() - .5) * 3,
+      width, height, depth,
+      Math.random() > .5
+        ? materials.building
+        : materials.building2
+    );
+
+    box(
+      scene,
+      building.position.x,
+      height + .15,
+      building.position.z,
+      width + .2, .3, depth + .2,
+      materials.roof
+    );
+
+    // Simple windows
+    for (let floor = 1; floor < height / 3; floor++) {
+      for (let wx = -1; wx <= 1; wx++) {
+        box(
+          scene,
+          building.position.x + wx * width / 3,
+          floor * 3,
+          building.position.z + depth / 2 + .02,
+          .8, 1.1, .08,
+          mat(0x426c83)
+        );
+      }
+    }
+  }
+}
+
+// Trees
+for (let i = 0; i < 65; i++) {
+  const x = (Math.random() - .5) * 180;
+  const z = (Math.random() - .5) * 190;
+
+  if (Math.abs(x) < 10 || Math.abs(x - 45) < 6 ||
+      Math.abs(x + 45) < 6) continue;
+
+  cylinder(scene, x, 1, z, .35, 2, materials.trunk);
+
+  const leaves = new THREE.Mesh(
+    new THREE.ConeGeometry(1.8, 4, 7),
+    materials.tree
+  );
+
+  leaves.position.set(x, 3.2, z);
+  scene.add(leaves);
+}
+
+/* PLAYER */
+
+function makeCharacter(color, skinColor) {
+  const group = new THREE.Group();
+
+  const bodyMaterial = mat(color);
+  const faceMaterial = mat(skinColor);
+  const darkMaterial = mat(0x252a30);
+
+  box(group, 0, 1.35, 0, .8, 1, .45, bodyMaterial);
+
+  const head = new THREE.Mesh(sphereGeometry, faceMaterial);
+  head.position.y = 2.05;
+  head.scale.set(.34, .38, .34);
+  group.add(head);
+
+  // Arms
+  box(group, -.52, 1.4, 0, .22, .8, .25, bodyMaterial);
+  box(group, .52, 1.4, 0, .22, .8, .25, bodyMaterial);
+
+  // Legs
+  box(group, -.22, .45, 0, .28, .85, .3, darkMaterial);
+  box(group, .22, .45, 0, .28, .85, .3, darkMaterial);
+
+  return group;
+}
+
+const player = makeCharacter(0x2862a0, 0xc58c63);
+scene.add(player);
+
+const state = {
+  health: 100,
+  onFoot: true,
+  firstPerson: false,
+  speed: 0,
+  jumpVelocity: 0,
+  y: 0,
+  attacking: false,
+  reloading: false,
+  ammo: 30,
+  maxAmmo: 30,
+  gameOver: false
+};
+
+player.position.set(0, 0, 12);
+
+const playerForward = new THREE.Vector3(0, 0, -1);
+
+function getForward() {
+  return playerForward.clone()
+    .applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y)
+    .normalize();
+}
+
+/* VEHICLE */
+
+const vehicle = new THREE.Group();
+
+box(vehicle, 0, .9, 0, 2.2, .8, 4, materials.vehicle);
+box(vehicle, 0, 1.55, -.3, 1.7, .7, 1.8, materials.metal);
+box(vehicle, 0, 1.55, -.3, 1.45, .5, 1.5, mat(0x406578));
+
+for (const x of [-1.1, 1.1]) {
+  for (const z of [-1.3, 1.3]) {
+    const wheel = new THREE.Mesh(
+      new THREE.CylinderGeometry(.42, .42, .28, 12),
+      materials.tire
+    );
+
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(x, .48, z);
+    vehicle.add(wheel);
+  }
+}
+
+vehicle.position.set(4, 0, 8);
+scene.add(vehicle);
+
+const driveBtn = document.getElementById("driveBtn");
+
+function updateVehicleButton() {
+  const distance = player.position.distanceTo(vehicle.position);
+
+  driveBtn.style.display =
+    (distance < 5 || !state.onFoot) ? "block" : "none";
+
+  driveBtn.textContent =
+    state.onFoot ? "ENTER VEHICLE" : "EXIT VEHICLE";
+}
+
+driveBtn.addEventListener("click", () => {
+  if (state.onFoot) {
+    if (player.position.distanceTo(vehicle.position) < 5) {
+      state.onFoot = false;
+      player.visible = false;
+      player.position.copy(vehicle.position);
+      showMessage("Vehicle entered!");
+    } else {
+      showMessage("Move closer to the vehicle!");
+    }
+  } else {
+    state.onFoot = true;
+    player.visible = true;
+    player.position.copy(vehicle.position);
+    player.position.x += 2.5;
+    showMessage("Vehicle exited!");
+  }
+
+  updateHUD();
+});
+
+/* ENEMIES */
+
+const enemies = [];
+
+function spawnEnemy(x, z) {
+  const enemy = makeCharacter(0xa72c2c, 0x9c7156);
+
+  enemy.position.set(x, 0, z);
+  scene.add(enemy);
+
+  enemies.push({
+    mesh: enemy,
+    health: 100,
+    attackCooldown: 0,
+    alive: true
+  });
+}
+
+for (let i = 0; i < 9; i++) {
+  let x, z;
+
+  do {
+    x = (Math.random() - .5) * 90;
+    z = (Math.random() - .5) * 120;
+  } while (Math.abs(x) < 8 && Math.abs(z) < 15);
+
+  spawnEnemy(x, z);
+}
+
+/* BULLETS */
+
+const bullets = [];
+
+function shoot() {
+  if (state.gameOver || state.reloading) return;
+
+  if (state.ammo <= 0) {
+    showMessage("Reload your weapon!");
+    return;
+  }
+
+  state.ammo--;
+
+  const direction = getForward();
+
+  // Aim toward the camera's viewing direction.
+  camera.getWorldDirection(direction);
+
+  const origin = state.onFoot
+    ? player.position.clone().add(new THREE.Vector3(0, 1.5, 0))
+    : vehicle.position.clone().add(new THREE.Vector3(0, 1.3, 0));
+
+  if (state.firstPerson && state.onFoot) {
+    camera.getWorldDirection(direction);
+  }
+
+  const projectile = new THREE.Mesh(
+    sphereGeometry,
+    materials.bullet
+  );
+
+  projectile.scale.set(.13, .13, .13);
+  projectile.position.copy(origin);
+  scene.add(projectile);
+
+  bullets.push({
+    mesh: projectile,
+    direction: direction.normalize(),
+    life: 1.8
+  });
+
+  updateHUD();
+}
+
+function punch() {
+  if (state.gameOver || !state.onFoot) return;
+
+  if (state.attacking) return;
+
+  state.attacking = true;
+
+  const forward = getForward();
+
+  let hit = false;
+
+  for (const enemy of enemies) {
+    if (!enemy.alive) continue;
+
+    const difference = enemy.mesh.position.clone()
+      .sub(player.position);
+
+    const distance = difference.length();
+
+    difference.normalize();
+
+    if (distance < 3 && difference.dot(forward) > .35) {
+      enemy.health -= 35;
+      hit = true;
+
+      if (enemy.health <= 0) {
+        enemy.alive = false;
+        scene.remove(enemy.mesh);
+      }
+
+      break;
+    }
+  }
+
+  showMessage(hit ? "HIT!" : "PUNCH!");
+
+  setTimeout(() => {
+    state.attacking = false;
+  }, 350);
+
+  updateHUD();
+}
+
+function reload() {
+  if (state.reloading || state.ammo === state.maxAmmo) return;
+
+  state.reloading = true;
+  showMessage("Reloading...");
+
+  setTimeout(() => {
+    state.ammo = state.maxAmmo;
+    state.reloading = false;
+    updateHUD();
+    showMessage("Weapon ready!");
+  }, 1200);
+}
+
+/* MOVEMENT CONTROLS */
+
+const input = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  jump: false
+};
+
+function bindHold(id, key) {
+  const button = document.getElementById(id);
+
+  const down = event => {
+    event.preventDefault();
+    input[key] = true;
+  };
+
+  const up = event => {
+    event.preventDefault();
+    input[key] = false;
+  };
+
+  button.addEventListener("pointerdown", down);
+  button.addEventListener("pointerup", up);
+  button.addEventListener("pointercancel", up);
+  button.addEventListener("pointerleave", up);
+}
+
+bindHold("forward", "forward");
+bindHold("backward", "backward");
+bindHold("left", "left");
+bindHold("right", "right");
+bindHold("jump", "jump");
+
+document.getElementById("shoot")
+  .addEventListener("pointerdown", e => {
+    e.preventDefault();
+    shoot();
+  });
+
+document.getElementById("punch")
+  .addEventListener("pointerdown", e => {
+    e.preventDefault();
+    punch();
+  });
+
+document.getElementById("reload")
+  .addEventListener("pointerdown", e => {
+    e.preventDefault();
+    reload();
+  });
+
+document.getElementById("cameraBtn").addEventListener("click", () => {
+  state.firstPerson = !state.firstPerson;
+
+  showMessage(
+    state.firstPerson ? "FIRST-PERSON VIEW" : "THIRD-PERSON VIEW"
+  );
+});
+
+/* KEYBOARD SUPPORT */
+
+window.addEventListener("keydown", e => {
+  if (e.repeat) return;
+
+  if (e.key === "w" || e.key === "ArrowUp") input.forward = true;
+  if (e.key === "s" || e.key === "ArrowDown") input.backward = true;
+  if (e.key === "a" || e.key === "ArrowLeft") input.left = true;
+  if (e.key === "d" || e.key === "ArrowRight") input.right = true;
+
+  if (e.key === " ") input.jump = true;
+  if (e.key === "f") punch();
+  if (e.key === "r") reload();
+
+  if (e.key === "e") {
+    driveBtn.click();
+  }
+
+  if (e.key === "c") {
+    state.firstPerson = !state.firstPerson;
+  }
+
+  if (e.key === "Enter" && state.gameOver) {
+    location.reload();
+  }
+});
+
+window.addEventListener("keyup", e => {
+  if (e.key === "w" || e.key === "ArrowUp") input.forward = false;
+  if (e.key === "s" || e.key === "ArrowDown") input.backward = false;
+  if (e.key === "a" || e.key === "ArrowLeft") input.left = false;
+  if (e.key === "d" || e.key === "ArrowRight") input.right = false;
+  if (e.key === " ") input.jump = false;
+});
+
+/* CAMERA LOOK */
+
+let lookPointer = null;
+let lastLookX = 0;
+let lastLookY = 0;
+let cameraYaw = 0;
+let cameraPitch = .22;
+
+renderer.domElement.addEventListener("pointerdown", e => {
+  if (e.clientX < window.innerWidth * .4) return;
+
+  lookPointer = e.pointerId;
+  lastLookX = e.clientX;
+  lastLookY = e.clientY;
+
+  renderer.domElement.setPointerCapture(e.pointerId);
+});
+
+renderer.domElement.addEventListener("pointermove", e => {
+  if (e.pointerId !== lookPointer) return;
+
+  const dx = e.clientX - lastLookX;
+  const dy = e.clientY - lastLookY;
+
+  lastLookX = e.clientX;
+  lastLookY = e.clientY;
+
+  cameraYaw -= dx * .006;
+  cameraPitch = THREE.MathUtils.clamp(
+    cameraPitch + dy * .004, -.25, .8
+  );
+});
+
+function stopLook(e) {
+  if (e.pointerId === lookPointer) {
+    lookPointer = null;
+  }
+}
+
+renderer.domElement.addEventListener("pointerup", stopLook);
+renderer.domElement.addEventListener("pointercancel", stopLook);
+
+/* HUD */
+
+const healthFill = document.getElementById("healthFill");
+const enemyCount = document.getElementById("enemyCount");
+const modeLabel = document.getElementById("mode");
+const info = document.getElementById("info");
+
+let messageTimeout;
+
+function showMessage(text) {
+  const message = document.getElementById("message");
+
+  message.textContent = text;
+  message.style.display = "block";
+
+  clearTimeout(messageTimeout);
+
+  messageTimeout = setTimeout(() => {
+    message.style.display = "none";
+  }, 1200);
+}
+
+function updateHUD() {
+  healthFill.style.width = state.health + "%";
+
+  healthFill.style.background =
+    state.health < 30 ? "#ff4242" : "#35df70";
+
+  enemyCount.textContent =
+    enemies.filter(e => e.alive).length;
+
+  modeLabel.textContent =
+    state.onFoot ? "ON FOOT" : "DRIVING";
+
+  let ammoLine = document.getElementById("ammoLine");
+
+  if (!ammoLine) {
+    ammoLine = document.createElement("div");
+    ammoLine.id = "ammoLine";
+    info.appendChild(ammoLine);
+  }
+
+  ammoLine.textContent =
+    "Ammo: " + state.ammo + "/" + state.maxAmmo;
+}
+
+/* GAME UPDATE */
+
+function updatePlayer(dt) {
+  if (state.gameOver) return;
+
+  const turnSpeed = 2.4;
+
+  if (input.left) player.rotation.y += turnSpeed * dt;
+  if (input.right) player.rotation.y -= turnSpeed * dt;
+
+  let movement = 0;
+
+  if (input.forward) movement += 1;
+  if (input.backward) movement -= 1;
+
+  const forward = getForward();
+
+  if (state.onFoot) {
+    const speed = 8;
+
+    player.position.addScaledVector(
+      forward,
+      movement * speed * dt
+    );
+
+    // Simple jump
+    if (input.jump && state.y === 0) {
+      state.jumpVelocity = 7;
+    }
+
+    state.jumpVelocity -= 18 * dt;
+    state.y += state.jumpVelocity * dt;
+
+    if (state.y < 0) {
+      state.y = 0;
+      state.jumpVelocity = 0;
+    }
+
+    player.position.y = state.y;
+
+    // Keep the character inside the playable area
+    player.position.x = THREE.MathUtils.clamp(
+      player.position.x, -100, 100
+    );
+
+    player.position.z = THREE.MathUtils.clamp(
+      player.position.z, -105, 105
+    );
+
+  } else {
+    state.speed = THREE.MathUtils.damp(
+      state.speed,
+      movement * 15,
+      2.5,
+      dt
+    );
+
+    vehicle.rotation.y = player.rotation.y;
+
+    vehicle.position.addScaledVector(
+      forward,
+      state.speed * dt
+    );
+
+    vehicle.position.x = THREE.MathUtils.clamp(
+      vehicle.position.x, -100, 100
+    );
+
+    vehicle.position.z = THREE.MathUtils.clamp(
+      vehicle.position.z, -105, 105
+    );
+
+    player.position.copy(vehicle.position);
+  }
+}
+
+function updateEnemies(dt) {
+  if (state.gameOver) return;
+
+  for (const enemy of enemies) {
+    if (!enemy.alive) continue;
+
+    const target = state.onFoot
+      ? player.position
+      : vehicle.position;
+
+    const difference = target.clone()
+      .sub(enemy.mesh.position);
+
+    const distance = difference.length();
+
+    if (distance > 1.7) {
+      difference.normalize();
+
+      enemy.mesh.position.addScaledVector(
+        difference, 2.1 * dt
+      );
+
+      enemy.mesh.rotation.y =
+        Math.atan2(-difference.x, -difference.z);
+    }
+
+    enemy.attackCooldown -= dt;
+
+    if (distance < 2.2 && enemy.attackCooldown <= 0) {
+      enemy.attackCooldown = 1.1;
+
+      // Vehicle provides some protection
+      const damage = state.onFoot ? 7 : 2;
+
+      state.health = Math.max(0, state.health - damage);
+
+      updateHUD();
+
+      if (state.health <= 0) {
+        endGame();
+      }
+    }
+  }
+}
+
+function updateBullets(dt) {
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const bullet = bullets[i];
+
+    bullet.mesh.position.addScaledVector(
+      bullet.direction, 45 * dt
+    );
+
+    bullet.life -= dt;
+
+    let remove = bullet.life <= 0;
+
+    for (const enemy of enemies) {
+      if (!enemy.alive) continue;
+
+      const distance = bullet.mesh.position.distanceTo(
+        enemy.mesh.position.clone().add(
+          new THREE.Vector3(0, 1.2, 0)
+        )
+      );
+
+      if (distance < 1) {
+        enemy.health -= 50;
+
+        if (enemy.health <= 0) {
+          enemy.alive = false;
+          scene.remove(enemy.mesh);
+        }
+
+        remove = true;
+        break;
+      }
+    }
+
+    if (remove) {
+      scene.remove(bullet.mesh);
+      bullets.splice(i, 1);
+    }
+  }
+}
+
+function updateCamera(dt) {
+  const target = state.onFoot
+    ? player.position.clone()
+    : vehicle.position.clone();
+
+  if (state.firstPerson && state.onFoot) {
+    const direction = getForward();
+
+    direction.applyAxisAngle(
+      new THREE.Vector3(0, 1, 0), cameraYaw
+    );
+
+    camera.position.copy(target).add(
+      new THREE.Vector3(0, 1.75, 0)
+    );
+
+    camera.lookAt(
+      camera.position.clone().addScaledVector(direction, 10)
+    );
+
+    return;
+  }
+
+  const direction = getForward();
+
+  direction.applyAxisAngle(
+    new THREE.Vector3(0, 1, 0), cameraYaw
+  );
+
+  const distance = state.onFoot ? 7 : 10;
+  const height = state.onFoot ? 4 : 5;
+
+  const desiredPosition = target.clone()
+    .addScaledVector(direction, -distance);
+
+  desiredPosition.y += height + cameraPitch * 3;
+
+  camera.position.lerp(desiredPosition, Math.min(1, dt * 5));
+
+  const lookTarget = target.clone();
+  lookTarget.y += 1.4;
+
+  camera.lookAt(lookTarget);
+}
+
+function endGame() {
+  state.gameOver = true;
+
+  showMessage("MISSION FAILED");
+
+  const overlay = document.getElementById("overlay");
+
+  overlay.style.display = "flex";
+
+  overlay.innerHTML = `
+    <h1>MISSION FAILED</h1>
+    <p>Your character needs to recover.</p>
+    <button id="restartBtn">RESTART MISSION</button>
+  `;
+
+  document.getElementById("restartBtn")
+    .addEventListener("click", () => location.reload());
+}
+
+/* START */
+
+document.getElementById("startBtn").addEventListener("click", () => {
+  document.getElementById("overlay").style.display = "none";
+  showMessage("MISSION STARTED!");
+});
+
+camera.position.set(0, 5, 20);
+camera.lookAt(player.position);
+
+updateHUD();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(clock.getDelta(), .04);
+
+  updatePlayer(dt);
+  updateEnemies(dt);
+  updateBullets(dt);
+  updateCamera(dt);
+  updateVehicleButton();
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+</script>
+
+</body>
+</html>
